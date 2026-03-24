@@ -1,0 +1,122 @@
+from fastapi import FastAPI, Request, Form, status, HTTPException
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import RedirectResponse
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from schemas import PostCreate, PostResponse, PostUpdate
+
+app = FastAPI()
+templates = Jinja2Templates(directory="templates")
+
+posts  = [{"id":1, "title":"1st Post", "content":"Hello World"},
+          {"id":2, "title":"2nd Post", "content":"Learning FastAPI"},
+          {"id":3, "title":"3rd Post", "content":"Started Building"}]
+
+@app.get("/", response_model=list[PostResponse])
+def home(request:Request):
+    return templates.TemplateResponse(
+        "home.html",{"request":request, "posts":posts})
+
+@app.get("/post/{post_id}", response_model=PostResponse)
+def part(request:Request, post_id:int):
+    for post in posts:
+        if post["id"] == post_id:
+            return templates.TemplateResponse(
+                "post.html", {"request":request, "post":post})
+
+    raise HTTPException(status_code=404, detail="Post Not found")
+
+@app.get("/create")
+def create_page(request:Request):
+    return templates.TemplateResponse(
+        "create.html",{"request":request,"posts":posts})
+
+@app.post("/create", response_model=PostResponse)
+def create_post(request:Request,title:str=Form(...),content:str=Form(...)):
+    errors = {}
+    clean_title = title.strip()
+    clean_content = content.strip()
+
+    if not clean_title:
+        errors["title"] = "Title cannot be empty"
+    elif (len(clean_title)) < 3:
+        errors["title"] = "Need more Characters"
+
+    if not clean_content:
+        errors["content"] = "Content cannot be empty"
+    elif (len(clean_content)) < 7:
+        errors["content"] = "Need more Characters"
+
+    if errors:
+        return templates.TemplateResponse(
+            "create.html",{"request":request,"title":clean_title,"content":clean_content},
+            status_code=400)
+
+    new_id = max(p["id"] for p in posts) +1 if posts else 1
+    new_post = {"id":new_id,"title":clean_title,"content":clean_content}
+
+    posts.append(new_post)
+    return RedirectResponse(url="/", status_code=303)
+
+@app.post("/post/{post_id}/delete")
+def delete_post(request:Request, post_id:int):
+    global posts
+
+    posts = [post for post in posts if post["id"] != post_id]
+    
+    return RedirectResponse(url="/", status_code=303)
+
+@app.get("/post/{post_id}/edit")
+def edit_page(request:Request,post_id:int):
+    post = next((post for post in posts if post["id"] == post_id),None)
+    
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    return templates.TemplateResponse(
+        "edit.html",{"request":request,"post":post})
+
+@app.post("/post/{post_id}/edit")
+def edit_post(request:Request,post_id:int,title:str=Form(...),content:str=Form(...)):
+    global posts
+
+    post = next((post for post in posts if post["id"] == post_id),None)
+
+    errors = {}
+    clean_title = title.strip()
+    clean_content = content.strip()
+
+    if not clean_title:
+        errors["title"] = "Title cannot be empty"
+    elif (len(clean_title)) < 3:
+        errors["title"] = "Need more Characters"
+
+    if not clean_content:
+        errors["content"] = "Content cannot be empty"
+    elif (len(clean_content)) < 7:
+        errors["content"] = "Need more Characters"
+
+    if errors:
+        return templates.TemplateResponse(
+            "edit.html",{"request":request,"errors":errors,"post":post},
+            status_code=400)
+    
+    for post in posts:
+        if post["id"] == post_id:
+            post["title"] = clean_title
+            post["content"] = clean_content
+            break
+
+    return RedirectResponse(url="/",status_code=303)
+
+@app.exception_handler(StarletteHTTPException)
+def http_exception_handler(request:Request, exc:StarletteHTTPException):
+    return templates.TemplateResponse(
+        "error.html",{"request":request, "status_code":exc.status_code,"detail":exc.detail},
+        status_code=exc.status_code)
+
+@app.exception_handler(RequestValidationError)
+def validation_exception_handler(request:Request,exc:RequestValidationError):
+    return templates.TemplateResponse(
+        "error.html",{"request":request, "status_code":400, "detail":"Invalid Input"},
+        status_code=400)

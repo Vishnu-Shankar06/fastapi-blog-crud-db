@@ -1,0 +1,17 @@
+<h1>Create Post</h1>
+
+<form method="post" action="/create">
+    <input type="text" name="title" placeholder="Title">
+    {% if errors and errors.get("title") %}
+        <p style="color: red;">{{ errors["title"] }}</p>
+    {% endif %}
+    <br><br>
+
+    <textarea name="content" placeholder="Content"></textarea>
+    {% if errors and errors.get("content") %}
+        <p style="color: red;">{{ errors["content"] }}</p>
+    {% endif %}
+    <br><br>
+
+    <button type="submit">Create</button>
+</form>

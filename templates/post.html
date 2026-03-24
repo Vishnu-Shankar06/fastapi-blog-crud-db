@@ -1,0 +1,12 @@
+<h1>{{post.title}}</h1>
+<p>{{post.content}}</p>
+
+<a href="/post/{{post.id}}/edit">
+    <button type="button">Edit</button>
+</a><br><br>
+
+<form method="post" action="/post/{{ post.id }}/delete">
+    <button type="submit">Delete Post</button>
+</form>
+
+<a href="/"><button type="button">home</button></a>

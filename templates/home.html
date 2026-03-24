@@ -1,0 +1,7 @@
+{% for post in posts %}
+    <h1><a href="/post/{{post.id}}">{{ post.title }}</a></h1>
+    <p>{{ post.content }}</p>
+{% endfor %}
+<br>
+<br>
+<p><a href="/create">Create New Post</a></p>
